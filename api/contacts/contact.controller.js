@@ -35,13 +35,30 @@ class ContactController {
   }
 
   async getContacts(req, res, next) {
-    try {
-      const contacts = await contactModel.find();
+    const { limit = 10, page = 1, sub } = req.query; // default page and limit
 
-      return res.status(200).json(contacts);
-    } catch (err) {
-      next(err);
+    const queryCriteria = {};
+    if (sub) {
+      queryCriteria.subscription = sub;
     }
+
+    try {
+      const paginatedContacts = await contactModel.paginate(queryCriteria, {
+        limit,
+        page,
+      });
+      return res.status(200).json(paginatedContacts);
+    } catch (err) {
+      next();
+    }
+
+    // try {
+    //   const contacts = await contactModel.find();
+
+    //   return res.status(200).json(contacts);
+    // } catch (err) {
+    //   next(err);
+    // }
   }
 
   async getContactById(req, res, next) {
@@ -82,8 +99,6 @@ class ContactController {
         contactId,
         req.body,
       );
-
-      console.log('contactToUpdate', contactToUpdate);
 
       if (!contactToUpdate) {
         return res.status(404).send();
