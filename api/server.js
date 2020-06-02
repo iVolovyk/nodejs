@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const contactRouter = require('./contacts/contact.router');
+const { userRouter, authRouter } = require('./users/user.router');
 
 //Enable .env variables
 require('dotenv').config();
@@ -10,7 +11,7 @@ require('dotenv').config();
 // 3. init routes
 // 4. init db
 // 5. start listening
-mongoose.set('debug', true);
+// mongoose.set('debug', true);
 mongoose.set('useCreateIndex', true);
 
 module.exports = class ContactServer {
@@ -31,12 +32,14 @@ module.exports = class ContactServer {
   }
 
   initMiddlewares() {
-    this.server.use(express.urlencoded());
+    this.server.use(express.urlencoded({ extended: true }));
     this.server.use(express.json());
   }
 
   initRoutes() {
     this.server.use('/api/contacts', contactRouter);
+    this.server.use('/auth', authRouter);
+    this.server.use('/users', userRouter);
   }
 
   async initDatabase() {
