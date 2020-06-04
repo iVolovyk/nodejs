@@ -1,3 +1,4 @@
+
 const fs = require('fs');
 const { promises: fsPromises } = fs;
 const path = require('path');
@@ -6,11 +7,13 @@ const { v4: uuidv4 } = require('uuid');
 const contactsPath = path.join(__dirname, 'db', 'contacts.json');
 const utf8 = 'utf8';
 
+
 async function listContacts() {
   try {
     const data = await fsPromises.readFile(contactsPath, utf8);
 
     return data;
+
   } catch (err) {
     console.log(err);
   }
@@ -23,6 +26,7 @@ async function getContactById(contactId) {
     const contact = JSON.parse(data).find(contact => contact.id === contactId);
 
     return contact;
+
   } catch (err) {
     console.log(err);
   }
@@ -30,6 +34,7 @@ async function getContactById(contactId) {
 
 async function removeContact(contactId) {
   try {
+
     let userDeleted;
 
     const data = await fsPromises.readFile(contactsPath, utf8);
@@ -40,6 +45,7 @@ async function removeContact(contactId) {
 
     const filteredData = JSON.parse(data).filter(
       contact => contact.id !== contactId,
+
     );
 
     const strignifiedData = JSON.stringify(filteredData);
@@ -47,6 +53,7 @@ async function removeContact(contactId) {
     await fsPromises.writeFile(contactsPath, strignifiedData, utf8);
 
     return (userDeleted = true);
+
   } catch (err) {
     console.log(err);
   }
@@ -72,10 +79,12 @@ async function addContact(name, email, phone) {
     await fsPromises.writeFile(contactsPath, strignifiedData, utf8);
 
     return newContact;
+
   } catch (err) {
     console.log(err);
   }
 }
+
 
 async function updateContact(contactId, updateFilelds) {
   try {
@@ -107,6 +116,7 @@ async function updateContact(contactId, updateFilelds) {
     console.log(err);
   }
 }
+
 
 module.exports = {
   listContacts,

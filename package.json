@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "dependencies": {
+
     "cors": "^2.8.5",
     "express": "^4.17.1",
     "express-validator": "^6.4.1",
@@ -16,12 +17,13 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon --inspect index.js"
+
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/iVolovyk/nodejs.git"
   },
-  "author": "",
+  "author": "iVolovyk",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/iVolovyk/nodejs/issues"
