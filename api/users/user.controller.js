@@ -1,19 +1,18 @@
 const Joi = require('@hapi/joi');
 Joi.objectId = require('joi-objectid')(Joi);
+const jdenticon = require('jdenticon');
+const Jimp = require('jimp');
+const { promises: fsPromises } = require('fs');
+const path = require('path');
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const userModel = require('./user.model');
 require('dotenv').config(); // process.env vaiables import
-const JWT_SECRET = process.env.JWT_SECRET;
+const { JWT_SECRET, PORT } = process.env;
 const {
   Types: { ObjectId },
 } = require('mongoose');
-const {
-  CoflictError,
-  NotFoundError,
-  ValidationError,
-  UnauthorizedError,
-} = require('../helpers/errors.constructors');
+const { UnauthorizedError } = require('../helpers/errors.constructors');
 
 class UserController {
   constructor() {
@@ -21,27 +20,71 @@ class UserController {
     this.createUser = this._createUser.bind(this);
   }
 
-  async _createUser(req, res, next) {
+  async checkExistingUser(req, res, next) {
     try {
-      const { email, password } = req.body;
-      const passwordHash = await bcryptjs.hash(password, this._costFactor);
-
+      const { email } = req.body;
       const existingUser = await userModel.findUserByEmail(email);
       if (existingUser) {
         return res.status(409).json({
           message: 'Email in use',
         });
       }
+      next();
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async createAvatar(req, res, next) {
+    const size = 200;
+    const value = new Date();
+    const png = jdenticon.toPng(value, size);
+    const fileName = `${Date.now()}.png`;
+    const filePath = path.join(__dirname, '../../tmp', fileName);
+
+    try {
+      await fsPromises.writeFile(filePath, png);
+      req.filePath = filePath;
+      req.fileName = fileName;
+      next();
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async createAvatarURL(req, res, next) {
+    const publicPath = path.join(
+      __dirname,
+      '../../public/images',
+      req.fileName,
+    );
+    const avatarURL = `http://localhost:${PORT}/images/${req.fileName}`;
+    try {
+      await fsPromises.rename(req.filePath, publicPath);
+      req.avatarURL = avatarURL;
+      next();
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async _createUser(req, res, next) {
+    try {
+      const { avatarURL } = req;
+      const { email, password } = req.body;
+      const passwordHash = await bcryptjs.hash(password, this._costFactor);
 
       const user = await userModel.create({
         email,
         password: passwordHash,
+        avatarURL,
       });
 
       return res.status(201).json({
         user: {
           email: user.email,
           subscription: user.subscription,
+          avatarURL: user.avatarURL,
         },
       });
     } catch (err) {
@@ -127,10 +170,11 @@ class UserController {
   }
 
   refreshUser(req, res, next) {
-    const { email, subscription } = req.user;
+    const { email, subscription, avatarURL } = req.user;
     return res.status(200).json({
       email,
       subscription,
+      avatarURL,
     });
   }
 
@@ -147,6 +191,63 @@ class UserController {
       }
 
       return res.status(201).json({ subscription, email });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async compressImage(req, res, next) {
+    try {
+      const { path: filePath, filename } = req.file;
+      const COMPRESSED_IMAGES_DIST = 'public/images';
+      const compressedFilePath = path.join(COMPRESSED_IMAGES_DIST, filename);
+
+      const lenna = await Jimp.read(filePath);
+      lenna
+        .resize(200, Jimp.AUTO) // resize 256 * auto
+        .quality(80) // set JPEG quality
+        .write(compressedFilePath); // save
+
+      req.file = {
+        ...req.file,
+        destination: COMPRESSED_IMAGES_DIST,
+        path: compressedFilePath,
+      };
+
+      await fsPromises.unlink(filePath);
+
+      next();
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  createUpdatedAvatarURL(req, res, next) {
+    console.log('req.file', req.file);
+    console.log('req.body', req.body);
+
+    const avatarURL = `http://localhost:${PORT}/images/${req.file.filename}`;
+    req.avatarURL = avatarURL;
+    // res.status(200).json({ avatarURL });
+    next();
+  }
+
+  async updateUserAvatar(req, res, next) {
+    try {
+      const { _id: userId } = req.user;
+
+      const userToUpdate = await userModel.updateUser(userId, {
+        avatarURL: req.avatarURL,
+      });
+      console.log('userToUpdate', userToUpdate);
+
+      const { avatarURL } = userToUpdate;
+
+      if (!userToUpdate) {
+        return res.status(404).send();
+      }
+
+      return res.status(201).json({ avatarURL });
     } catch (err) {
       next(err);
     }

@@ -1,5 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const morgan = require('morgan');
 const contactRouter = require('./contacts/contact.router');
 const { userRouter, authRouter } = require('./users/user.router');
 
@@ -34,6 +35,8 @@ module.exports = class ContactServer {
   initMiddlewares() {
     this.server.use(express.urlencoded({ extended: true }));
     this.server.use(express.json());
+    this.server.use(express.static('public'));
+    this.server.use(morgan('combined'));
   }
 
   initRoutes() {
